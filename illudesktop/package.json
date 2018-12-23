@@ -4,6 +4,7 @@
   "main": "main.js",
   "dependencies": {
     "electron": "^4.0.0",
+    "express": "^4.16.4",
     "peer": "^0.2.10",
     "peerjs": "^0.3.18",
     "react": "^16.7.0",

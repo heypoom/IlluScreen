@@ -14,7 +14,7 @@ class App extends Component {
   }
 
   setupSocket = () => {
-    const socket = io('http://localhost:3366', {
+    const socket = io('http://localhost:9000', {
       transports: ['websocket']
     })
 
@@ -30,8 +30,7 @@ class App extends Component {
   setupStreaming = async () => {
     const peer = new Peer('desktop', {
       host: 'localhost',
-      port: 9000,
-      path: '/rtc'
+      port: 9009
     })
 
     const constraint = {

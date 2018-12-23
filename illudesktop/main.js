@@ -2,7 +2,7 @@
 const electron = require('electron')
 const {PeerServer} = require('peer')
 
-const createSocketServer = require('./ws')
+const createServer = require('./server')
 
 const {app, BrowserWindow} = electron
 
@@ -40,9 +40,7 @@ function createWindow() {
   })
 }
 
-const server = PeerServer({port: 9000, path: '/rtc'})
-
-createSocketServer()
+const server = createServer()
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

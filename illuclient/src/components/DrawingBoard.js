@@ -17,14 +17,14 @@ export default class Screen extends Component {
     this.draw({ x: 5, y: 5, w: 5, h: 5, color: 'red' })
     this.draw({ x: 20, y: 20, w: 30, h: 30, color: 'teal' })
 
-    this.setupStream()
+    await this.setupStream()
 
     window.DrawingBoard = this
   }
 
   setupSocket = () => {
     const socket = io.connect(
-      '192.168.1.36:3366',
+      '192.168.1.36:9000',
       {
         transports: ['websocket'],
       }
@@ -44,28 +44,29 @@ export default class Screen extends Component {
   setupStream = async () => {
     const peer = new Peer('drawing-client', {
       host: '192.168.1.36',
-      port: 9000,
-      path: '/rtc',
+      port: 9009,
     })
-
     console.log('Peer:', peer)
 
     const connection = peer.connect('desktop')
+
     console.log('Connection:', connection)
 
     // Create fake media stream
-    const mediaStream = new MediaStream()
+    const fakeStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+    })
 
-    const call = peer.call('desktop', mediaStream)
+    const call = peer.call('desktop', fakeStream)
 
     if (!call) {
       alert('Unable to call')
       return
     }
 
-    call.on('stream', async mediaStream => {
+    call.on('stream', mediaStream => {
       this.video.srcObject = mediaStream
-      await this.video.play()
+      this.video.play()
     })
   }
 
@@ -102,6 +103,8 @@ export default class Screen extends Component {
           onCanvas={this.onCanvas}
           onDraw={this.send}
           ref={ref => (this.board = ref)}
+          brushColor="#FFFF00"
+          lineWidth={16}
         />
 
         <video ref={ref => (this.video = ref)} />
