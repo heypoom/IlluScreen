@@ -1,36 +1,19 @@
 import React, {Component} from 'react'
 import Peer from 'peerjs'
-import io from 'socket.io-client'
 
 import DisplayCanvas from './DisplayCanvas'
 
 import './App.css'
 
 class App extends Component {
-  async componentDidMount() {
-    this.setupSocket()
-
-    await this.setupStreaming()
-  }
-
-  setupSocket = () => {
-    const socket = io('http://localhost:9000', {
-      transports: ['websocket']
-    })
-
-    socket.on('reconnect_attempt', () => {
-      console.log('> Reconnecting...')
-    })
-
-    socket.on('draw', this.handleDraw)
-
-    window.socket = socket
+  componentDidMount() {
+    this.setupStreaming()
   }
 
   setupStreaming = async () => {
     const peer = new Peer('desktop', {
       host: 'localhost',
-      port: 9009
+      port: 9000
     })
 
     const constraint = {
@@ -45,7 +28,17 @@ class App extends Component {
 
     const mediaStream = await navigator.mediaDevices.getUserMedia(constraint)
 
-    peer.on('call', function(call) {
+    peer.on('connection', connection => {
+      connection.on('data', data => {
+        console.log('> Incoming Data Packet:', data)
+
+        this.handlePacket(data)
+      })
+    })
+
+    peer.on('call', call => {
+      console.log('> Incoming Call:', call)
+
       // Answer the call, providing our mediaStream
       call.answer(mediaStream)
     })
@@ -56,7 +49,7 @@ class App extends Component {
     this.ctx = ctx
   }
 
-  handleDraw = data => {
+  handlePacket = data => {
     if (data.clear) {
       this.display.resetCanvas()
     }

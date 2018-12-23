@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import Peer from 'peerjs'
-import io from 'socket.io-client'
 
 import DrawableCanvas from './DrawableCanvas'
 
@@ -12,45 +11,28 @@ export default class Screen extends Component {
     this.canvas.width = window.innerWidth
     this.canvas.height = window.innerHeight
 
-    this.setupSocket()
-
-    this.draw({ x: 5, y: 5, w: 5, h: 5, color: 'red' })
-    this.draw({ x: 20, y: 20, w: 30, h: 30, color: 'teal' })
-
     await this.setupStream()
 
     window.DrawingBoard = this
   }
 
-  setupSocket = () => {
-    const socket = io.connect(
-      '192.168.1.36:9000',
-      {
-        transports: ['websocket'],
-      }
-    )
-
-    socket.on('reconnect_attempt', () => {
-      console.log('> Reconnecting...')
-    })
-
-    socket.on('welcome', console.log)
-    socket.connect()
-
-    this.socket = socket
-    window.socket = socket
-  }
-
   setupStream = async () => {
     const peer = new Peer('drawing-client', {
       host: '192.168.1.36',
-      port: 9009,
+      port: 9000,
     })
-    console.log('Peer:', peer)
+
+    this.peer = peer
 
     const connection = peer.connect('desktop')
+    this.conn = connection
 
-    console.log('Connection:', connection)
+    connection.on('open', () => {
+      console.log('> WebRTC Connection Established!')
+
+      this.draw({ x: 5, y: 5, w: 5, h: 5, color: 'red' })
+      this.draw({ x: 20, y: 20, w: 30, h: 30, color: 'teal' })
+    })
 
     // Create fake media stream
     const fakeStream = await navigator.mediaDevices.getUserMedia({
@@ -71,9 +53,9 @@ export default class Screen extends Component {
   }
 
   send = data => {
-    this.socket.emit('draw', data)
+    this.conn.send(data)
 
-    console.log('> Draw Command Sent:', data)
+    console.log('> Draw Command Sent via WebRTC:', data)
   }
 
   draw = data => {
