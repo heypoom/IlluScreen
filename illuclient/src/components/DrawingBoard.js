@@ -2,7 +2,9 @@ import React, { Component } from 'react'
 import Peer from 'peerjs'
 import io from 'socket.io-client'
 
-import './screen.css'
+import DrawableCanvas from './DrawableCanvas'
+
+import './drawingboard.css'
 
 export default class Screen extends Component {
   async componentDidMount() {
@@ -10,17 +12,17 @@ export default class Screen extends Component {
     this.canvas.width = window.innerWidth
     this.canvas.height = window.innerHeight
 
-    const peer = new Peer('drawing-client', {
-      host: '192.168.1.36',
-      port: 9000,
-      path: '/rtc',
-    })
+    this.setupSocket()
 
-    console.log('Peer:', peer)
+    this.draw({ x: 5, y: 5, w: 5, h: 5, color: 'red' })
+    this.draw({ x: 20, y: 20, w: 30, h: 30, color: 'teal' })
 
-    const connection = peer.connect('desktop')
-    console.log('Connection:', connection)
+    this.setupStream()
 
+    window.DrawingBoard = this
+  }
+
+  setupSocket = () => {
     const socket = io.connect(
       '192.168.1.36:3366',
       {
@@ -32,18 +34,24 @@ export default class Screen extends Component {
       console.log('> Reconnecting...')
     })
 
-    socket.on('yeah', () => console.log('Yeah!'))
     socket.on('welcome', console.log)
-
     socket.connect()
 
     this.socket = socket
     window.socket = socket
+  }
 
-    this.draw({ x: 5, y: 5, w: 5, h: 5, color: 'red' })
-    this.draw({ x: 20, y: 20, w: 30, h: 30, color: 'teal' })
+  setupStream = async () => {
+    const peer = new Peer('drawing-client', {
+      host: '192.168.1.36',
+      port: 9000,
+      path: '/rtc',
+    })
 
-    window.draw = this.draw
+    console.log('Peer:', peer)
+
+    const connection = peer.connect('desktop')
+    console.log('Connection:', connection)
 
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       video: true,
@@ -62,8 +70,14 @@ export default class Screen extends Component {
     })
   }
 
-  draw = data => {
+  send = data => {
     this.socket.emit('draw', data)
+
+    console.log('> Draw Command Sent:', data)
+  }
+
+  draw = data => {
+    this.send(data)
 
     const { x = 0, y = 0, w = 1, h = 1, color = 'white' } = data
     console.log('> Draw Event:', data)
@@ -72,10 +86,31 @@ export default class Screen extends Component {
     this.ctx.fillRect(x, y, w, h)
   }
 
+  clear = () => {
+    this.send({ clear: true })
+
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+  }
+
+  erase = (x = 0, y = 0, size = 16) => {
+    this.send({ erase: true })
+
+    this.ctx.clearRect(0, 0, size, size)
+  }
+
+  onCanvas = (canvas, ctx) => {
+    this.canvas = canvas
+    this.ctx = ctx
+  }
+
   render() {
     return (
       <div className="container">
-        <canvas className="canvas-display" ref={ref => (this.canvas = ref)} />
+        <DrawableCanvas
+          className="canvas-display"
+          onCanvas={this.onCanvas}
+          onDraw={this.send}
+        />
 
         <video ref={ref => (this.video = ref)} />
       </div>

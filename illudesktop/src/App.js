@@ -2,15 +2,18 @@ import React, {Component} from 'react'
 import Peer from 'peerjs'
 import io from 'socket.io-client'
 
+import DisplayCanvas from './DisplayCanvas'
+
 import './App.css'
 
 class App extends Component {
   async componentDidMount() {
-    this.canvas.width = window.innerWidth
-    this.canvas.height = window.innerHeight
+    this.setupSocket()
 
-    const ctx = this.canvas.getContext('2d')
+    await this.setupStreaming()
+  }
 
+  setupSocket = () => {
     const socket = io('http://localhost:3366', {
       transports: ['websocket']
     })
@@ -19,24 +22,19 @@ class App extends Component {
       console.log('> Reconnecting...')
     })
 
-    socket.on('draw', data => {
-      const {x = 0, y = 0, w = 1, h = 1, color = 'white'} = data
-      console.log('> Draw Event:', data)
-
-      ctx.fillStyle = color
-      ctx.fillRect(x, y, w, h)
-    })
+    socket.on('draw', this.handleDraw)
 
     window.socket = socket
+  }
 
+  setupStreaming = async () => {
     const peer = new Peer('desktop', {
       host: 'localhost',
       port: 9000,
       path: '/rtc'
     })
 
-    const mediaStream = await navigator.mediaDevices.getUserMedia({
-      // video: true,
+    const constraint = {
       video: {
         mandatory: {
           chromeMediaSource: 'screen',
@@ -44,7 +42,9 @@ class App extends Component {
           maxHeight: 720
         }
       }
-    })
+    }
+
+    const mediaStream = await navigator.mediaDevices.getUserMedia(constraint)
 
     peer.on('call', function(call) {
       // Answer the call, providing our mediaStream
@@ -52,11 +52,29 @@ class App extends Component {
     })
   }
 
+  onCanvas = (canvas, ctx) => {
+    this.canvas = canvas
+    this.ctx = ctx
+  }
+
+  handleDraw = data => {
+    if (data.clear) {
+      this.display.resetCanvas()
+    }
+
+    if (data.draw) {
+      this.display.draw(data.lX, data.lY, data.cX, data.cY)
+    }
+  }
+
   render() {
     return (
       <div className="container">
-        <h1>Hello</h1>
-        <canvas className="drawing-canvas" ref={ref => (this.canvas = ref)} />
+        <DisplayCanvas
+          className="drawing-canvas"
+          ref={ref => (this.display = ref)}
+          onCanvas={this.onCanvas}
+        />
       </div>
     )
   }

@@ -2,12 +2,12 @@ import React from 'react'
 import { Link } from 'gatsby'
 
 import Layout from '../components/layout'
-import Screen from '../components/Screen'
+import DrawingBoard from '../components/DrawingBoard'
 
 const IndexPage = () => (
   <Layout>
     <div>
-      <Screen />
+      <DrawingBoard />
     </div>
   </Layout>
 )
