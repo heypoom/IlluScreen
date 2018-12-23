@@ -53,14 +53,13 @@ export default class Screen extends Component {
     const connection = peer.connect('desktop')
     console.log('Connection:', connection)
 
-    const mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-    })
+    // Create fake media stream
+    const mediaStream = new MediaStream()
 
     const call = peer.call('desktop', mediaStream)
 
     if (!call) {
-      console.log('Unable to call')
+      alert('Unable to call')
       return
     }
 
@@ -87,15 +86,7 @@ export default class Screen extends Component {
   }
 
   clear = () => {
-    this.send({ clear: true })
-
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-  }
-
-  erase = (x = 0, y = 0, size = 16) => {
-    this.send({ erase: true })
-
-    this.ctx.clearRect(0, 0, size, size)
+    this.board.resetCanvas()
   }
 
   onCanvas = (canvas, ctx) => {
@@ -110,6 +101,7 @@ export default class Screen extends Component {
           className="canvas-display"
           onCanvas={this.onCanvas}
           onDraw={this.send}
+          ref={ref => (this.board = ref)}
         />
 
         <video ref={ref => (this.video = ref)} />
