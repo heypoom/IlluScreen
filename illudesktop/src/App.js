@@ -7,7 +7,9 @@ import './App.css'
 
 class App extends Component {
   componentDidMount() {
-    this.setupStreaming()
+    window.app = this
+
+    // this.setupStreaming()
   }
 
   setupStreaming = async () => {
@@ -15,6 +17,14 @@ class App extends Component {
       host: 'localhost',
       port: 9000
     })
+
+    this.peer = peer
+
+    peer.on('open', id => console.log('RTC: Connection Open:', id))
+    peer.on('close', () => console.log('RTC: Connection Closed'))
+    peer.on('connection', conn => console.log('RTC: Connection Established.'))
+    peer.on('disconnected', () => console.log('RTC: Disconnected.'))
+    peer.on('error', err => console.warn('RTC Error:', err.message))
 
     const constraint = {
       video: {
@@ -26,22 +36,25 @@ class App extends Component {
       }
     }
 
-    const mediaStream = await navigator.mediaDevices.getUserMedia(constraint)
+    const connection = peer.connect('drawing-client')
+    this.dataConnection = connection
 
-    peer.on('connection', connection => {
-      connection.on('data', data => {
-        console.log('> Incoming Data Packet:', data)
+    connection.on('data', data => {
+      console.log('> Incoming Data Packet:', data)
 
-        this.handlePacket(data)
-      })
+      this.handlePacket(data)
     })
 
-    peer.on('call', call => {
-      console.log('> Incoming Call:', call)
+    const desktopStream = await navigator.mediaDevices.getUserMedia(constraint)
+    this.stream = desktopStream
 
-      // Answer the call, providing our mediaStream
-      call.answer(mediaStream)
-    })
+    const call = peer.call('drawing-client', desktopStream)
+    this.mediaConnection = call
+
+    if (!call) {
+      alert('Unable to call')
+      return
+    }
   }
 
   onCanvas = (canvas, ctx) => {
@@ -66,6 +79,8 @@ class App extends Component {
           className="drawing-canvas"
           ref={ref => (this.display = ref)}
           onCanvas={this.onCanvas}
+          brushColor="#FFFF00"
+          lineWidth={16}
         />
       </div>
     )
